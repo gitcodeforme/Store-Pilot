@@ -4,7 +4,6 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import ukFlag from '../assets/flag/eng.png';
 import inFlag from '../assets/flag/ind.png';
-import './ReturnsBill.css';
 
 const CreateReturnBill = () => {
   const { t, i18n } = useTranslation();
