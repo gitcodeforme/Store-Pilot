@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import axiosInstance from '../api/axiosInstance';
 import { createProduct, getAllProducts, updateProduct, deleteProduct } from "./Service/ProductService";
@@ -52,21 +53,15 @@ const ManageProducts = () => {
       const response = await getAllProducts();
       const data = Array.isArray(response.data) ? response.data : [];
       setProducts(data);
-      if (data.length > 0) {
-        const lastProduct = data[data.length - 1];
-        const lastProductCode = lastProduct.productCode || "";
-        const newProductCode = generateNextProductCode(lastProductCode);
-        setFormData((prevFormData) => ({
-          ...prevFormData,
-          productCode: newProductCode,
-        }));
-      } else {
-        setFormData((prevFormData) => ({
-          ...prevFormData,
-          productCode: "P001", // Default code if no products exist
-        }));
-      }
 
+      // ✅ Generate new product code
+      const lastCode = data.length > 0 ? data[data.length - 1].productCode : "P000";
+      const newCode = generateNextProductCode(lastCode);
+
+      setFormData((prev) => ({
+        ...prev,
+        productCode: newCode,
+      }));
     } catch (error) {
       console.error("Error loading products:", error);
       setError("Failed to load products. Please try again later.");
@@ -76,21 +71,28 @@ const ManageProducts = () => {
   };
 
   const generateNextProductCode = (lastCode) => {
-    const match = lastCode.match(/(\D*)(\d+)$/); // Match letters followed by numbers
+    const match = lastCode.match(/(\D*)(\d+)$/); // Match letters + numbers
     if (match) {
       const prefix = match[1];
       const number = parseInt(match[2], 10) + 1;
       return `${prefix}${number.toString().padStart(match[2].length, "0")}`;
     }
-    return "P001"; // Default code if no pattern is matched
+    return "P001";
   };
-
-
 
   const loadUnits = async () => {
     try {
       const response = await axiosInstance.get("/api/units");
-      setUnits(response.data);
+      const unitsData = response.data || [];
+      setUnits(unitsData);
+
+      // ✅ Auto-select first unit
+      if (unitsData.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          unitName: unitsData[0].unitName,
+        }));
+      }
     } catch (error) {
       console.error("Error loading units:", error);
       setError("Failed to load units. Please try again later.");
@@ -103,56 +105,44 @@ const ManageProducts = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const {
-      productName,
-      productCode,
-      unitName,
-      quantity,
-      buyingPrice,
-      sellingPriceRetail,
-      sellingPriceWholesale,
-    } = formData;
-
     setLoading(true);
     setError("");
 
     try {
-      const selectedUnit = units.find((unit) => unit.unitName === unitName);
+      // ✅ Pick selected unit or fallback
+      const selectedUnit = units.find(u => u.unitName === formData.unitName) || units[0];
+      if (!selectedUnit) {
+        setError("No units available. Please add a unit first.");
+        setLoading(false);
+        return;
+      }
 
-     if (!selectedUnit) {
-      setError("Unit is required. Please select a valid unit.");
-      return;
-    }
-
-    const productData = {
-      productName: formData.productName,
-      productCode: formData.productCode,
-      unit: selectedUnit, 
-      quantity: Number(formData.quantity || 0),
-      buyingPrice: Number(formData.buyingPrice || 0),
-      sellingPriceRetail: Number(formData.sellingPriceRetail || 0),
-      sellingPriceWholesale: Number(formData.sellingPriceWholesale || 0),
-    };
-
+      const productData = {
+        productName: formData.productName || "Unnamed Product",
+        productCode: formData.productCode || generateNextProductCode(products[products.length - 1]?.productCode || "P000"),
+        unit: selectedUnit,
+        quantity: Number(formData.quantity || 0),
+        buyingPrice: Number(formData.buyingPrice || 0),
+        sellingPriceRetail: Number(formData.sellingPriceRetail || 0),
+        sellingPriceWholesale: Number(formData.sellingPriceWholesale || 0),
+      };
 
       if (editingIdentifier) {
         await updateProduct(editingIdentifier, productData);
-        setEditingIdentifier(null); // ✅ Clear editing mode
+        setEditingIdentifier(null);
       } else {
         await createProduct(productData);
       }
 
-      // ✅ Reset form after submit
       setFormData({
         productName: "",
-        productCode: "",
-        unitName: "",
+        productCode: generateNextProductCode(products[products.length - 1]?.productCode || "P000"),
+        unitName: selectedUnit.unitName,
         quantity: "",
         buyingPrice: "",
         sellingPriceRetail: "",
         sellingPriceWholesale: "",
       });
-
 
       loadProducts();
     } catch (error) {
@@ -168,7 +158,7 @@ const ManageProducts = () => {
     setFormData({
       productName: product.productName,
       productCode: product.productCode,
-      unitName: product.unit?.unitName || "",
+      unitName: product.unit?.unitName || (units[0]?.unitName || ""),
       quantity: product.quantity,
       buyingPrice: product.buyingPrice,
       sellingPriceRetail: product.sellingPriceRetail,
@@ -192,106 +182,27 @@ const ManageProducts = () => {
   };
 
   return (
-    <div
-      className="product-manager"
-      style={{
-        maxWidth: '900px',
-        margin: '30px auto',
-        padding: '20px',
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        boxShadow: '0 0 15px rgba(0,0,0,0.1)',
-        borderRadius: '8px',
-        backgroundColor: '#fff',
-        position: 'relative',
-      }}
-    >
+    <div style={{ maxWidth: '900px', margin: '30px auto', padding: '20px', fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", boxShadow: '0 0 15px rgba(0,0,0,0.1)', borderRadius: '8px', backgroundColor: '#fff', position: 'relative' }}>
       {/* Dashboard Button */}
       <div style={{ position: 'fixed', top: '20px', left: '20px' }}>
-        <Link
-          to="/dashboard"
-          style={{
-            textDecoration: 'none',
-            color: '#007bff',
-            fontSize: '18px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontWeight: '600',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            border: '1.5px solid #007bff',
-            backgroundColor: '#e7f1ff',
-            transition: 'background-color 0.3s, color 0.3s',
-          }}
-          title="Go to Dashboard"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#007bff';
-            e.currentTarget.style.color = 'white';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#e7f1ff';
-            e.currentTarget.style.color = '#007bff';
-          }}
-        >
+        <Link to="/dashboard" style={{ textDecoration: 'none', color: '#007bff', fontSize: '18px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '600', padding: '6px 12px', borderRadius: '6px', border: '1.5px solid #007bff', backgroundColor: '#e7f1ff' }}>
           <FaHome size={20} />
           Dashboard
         </Link>
       </div>
 
-      {/* Language Dropdown */}{/* Language Dropdown */}
+      {/* Language Dropdown */}
       <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
-        <div
-          onClick={() => setIsOpen(!isOpen)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            backgroundColor: 'white',
-            padding: '5px 10px',
-            borderRadius: 4,
-            boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-          }}
-        >
-          <img
-            src={currentLanguage.flag}
-            alt={currentLanguage.label}
-            style={{ width: 20, marginRight: 8 }}
-          />
+        <div onClick={() => setIsOpen(!isOpen)} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: 'white', padding: '5px 10px', borderRadius: 4, boxShadow: '0 0 5px rgba(0,0,0,0.2)' }}>
+          <img src={currentLanguage.flag} alt={currentLanguage.label} style={{ width: 20, marginRight: 8 }} />
           <span>{currentLanguage.label}</span>
         </div>
 
         {isOpen && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              right: 0,
-              backgroundColor: 'white',
-              border: '1px solid #ccc',
-              borderRadius: 4,
-              marginTop: 4,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              minWidth: 130,
-              zIndex: 2000,
-            }}
-          >
-            {languages.map((lang) => (
-              <div
-                key={lang.code}
-                onClick={() => changeLanguage(lang.code)}
-                style={{
-                  padding: '5px 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  backgroundColor: lang.code === currentLanguage.code ? '#eee' : 'white',
-                }}
-              >
-                <img
-                  src={lang.flag}
-                  alt={lang.label}
-                  style={{ width: 20, marginRight: 8 }}
-                />
+          <div style={{ position: 'absolute', top: '100%', right: 0, backgroundColor: 'white', border: '1px solid #ccc', borderRadius: 4, marginTop: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', minWidth: 130, zIndex: 2000 }}>
+            {languages.map(lang => (
+              <div key={lang.code} onClick={() => changeLanguage(lang.code)} style={{ padding: '5px 10px', display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: lang.code === currentLanguage.code ? '#eee' : 'white' }}>
+                <img src={lang.flag} alt={lang.label} style={{ width: 20, marginRight: 8 }} />
                 <span>{lang.label}</span>
               </div>
             ))}
@@ -303,174 +214,81 @@ const ManageProducts = () => {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
+      {/* Form */}
       <form onSubmit={handleSubmit} style={{ marginBottom: "2rem" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-          <thead style={{ backgroundColor: "#add8e6" }}>
-            <tr>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('product_name')}</th>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('product_code')}</th>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('unit')}</th>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('quantity')}</th>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('buyingPrice')}</th>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('retailPrice')}</th>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('wholesalePrice')}</th>
-              <th style={{ padding: "10px", border: "1px solid #ccc" }}>{t('actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ padding: "10px", border: "1px solid #ccc" }}>
-                <input
-                  type="text"
-                  name="productName"
-                  value={formData.productName}
-                  onChange={handleChange}
-                  required
-                  style={{ width: "100%" }}
-                  placeholder="Product Name"
-                />
-              </td>
-              <td style={{ padding: "10px", border: "1px solid #ccc" }}>
-                <input
-                  type="text"
-                  name="productCode"
-                  value={formData.productCode}
-                  onChange={handleChange}
-                  required
-                  style={{ width: "100%" }}
-                  placeholder="Product Code"
-                />
-              </td>
-              <td style={{ padding: "10px", border: "1px solid #ccc" }}>
-                <select
-                  name="unitName"
-                  value={formData.unitName}
-                  onChange={handleChange}
-                  required
-                  style={{ width: "100%" }}
-                >
-                  <option value="">{t('select_unit')}</option>
-                  {units.map((unit) => (
-                    <option key={unit.unitId} value={unit.unitName}>
-                      {unit.unitName}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td style={{ padding: "10px", border: "1px solid #ccc" }}>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                  required
-                  style={{ width: "100%" }}
-                  placeholder="Quantity"
-                />
-              </td>
-              <td style={{ padding: "10px", border: "1px solid #ccc" }}>
-                <input
-                  type="number"
-                  name="buyingPrice"
-                  value={formData.buyingPrice}
-                  onChange={handleChange}
-                  required
-                  style={{ width: "100%" }}
-                  placeholder="Buying Price"
-                />
-              </td>
-              <td style={{ padding: "10px", border: "1px solid #ccc" }}>
-                <input
-                  type="number"
-                  name="sellingPriceRetail"
-                  value={formData.sellingPriceRetail}
-                  onChange={handleChange}
-                  required
-                  style={{ width: "100%" }}
-                  placeholder="Retail Price"
-                />
-              </td>
-              <td style={{ padding: "10px", border: "1px solid #ccc" }}>
-                <input
-                  type="number"
-                  name="sellingPriceWholesale"
-                  value={formData.sellingPriceWholesale}
-                  onChange={handleChange}
-                  required
-                  style={{ width: "100%" }}
-                  placeholder="Wholesale Price"
-                />
-              </td>
-              <td style={{ padding: "10px", border: "1px solid #ccc", textAlign: "center" }}>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ padding: "6px 12px" }}
-                >
-                  {editingIdentifier ? "Update" : "Add"}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </form>
-
-
-
-      <h2>{t('products')}</h2>
-
-      {loading ? (
-        <p>{t('loading_products')}</p>
-      ) : products.length === 0 ? (
-        <p>{t('no_products_found')}</p>
-      ) : (
-        <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ backgroundColor: "#add8e6" }}>
             <tr>
               <th>{t('product_name')}</th>
               <th>{t('product_code')}</th>
               <th>{t('unit')}</th>
               <th>{t('quantity')}</th>
-              <th>{t('buying_price')}</th>
-              <th>{t('retail_price')}</th>
-              <th>{t('wholesale_price')}</th>
+              <th>{t('buyingPrice')}</th>
+              <th>{t('retailPrice')}</th>
+              <th>{t('wholesalePrice')}</th>
               <th>{t('actions')}</th>
             </tr>
           </thead>
           <tbody>
-            {products.map((prod) => (
-              <tr key={prod.productId}>
-                <td>{prod.productName}</td>
-                <td>{prod.productCode}</td>
-                <td>{prod.unit?.unitName || "-"}</td>
-                <td>{prod.quantity}</td>
-                <td>{prod.buyingPrice}</td>
-                <td>{prod.sellingPriceRetail}</td>
-                <td>{prod.sellingPriceWholesale}</td>
-                <td>
-                  <button
-                    onClick={() => handleEdit(prod)}
-                    style={{
-                      marginRight: "0.5rem",
-                      backgroundColor: "#add8e6", // Light Blue
-                      color: "#000",              // Black text for contrast
-                      border: "none",
-                      padding: "6px 12px",
-                      borderRadius: "4px",
-                      cursor: "pointer"
-                    }}
-                  >
-                    {t('edit')}
-                  </button>
-                  <button onClick={() => handleDelete(prod.productId)}>{t('delete')}</button>
-                </td>
-              </tr>
-            ))}
+            <tr>
+              <td><input type="text" name="productName" value={formData.productName} onChange={handleChange} placeholder="Product Name" style={{ width: "100%" }} /></td>
+              <td><input type="text" name="productCode" value={formData.productCode} disabled style={{ width: "100%", backgroundColor: "#f0f0f0" }} /></td>
+              <td>
+                <select name="unitName" value={formData.unitName} onChange={handleChange}>
+                  {units.map(u => <option key={u.unitId} value={u.unitName}>{u.unitName}</option>)}
+                </select>
+              </td>
+              <td><input type="number" name="quantity" value={formData.quantity} onChange={handleChange} placeholder="Quantity" style={{ width: "100%" }} /></td>
+              <td><input type="number" name="buyingPrice" value={formData.buyingPrice} onChange={handleChange} placeholder="Buying Price" style={{ width: "100%" }} /></td>
+              <td><input type="number" name="sellingPriceRetail" value={formData.sellingPriceRetail} onChange={handleChange} placeholder="Retail Price" style={{ width: "100%" }} /></td>
+              <td><input type="number" name="sellingPriceWholesale" value={formData.sellingPriceWholesale} onChange={handleChange} placeholder="Wholesale Price" style={{ width: "100%" }} /></td>
+              <td>
+                <button type="submit" disabled={loading}>{editingIdentifier ? "Update" : "Add"}</button>
+              </td>
+            </tr>
           </tbody>
         </table>
-      )}
+      </form>
+
+      {/* Products Table */}
+      <h2>{t('products')}</h2>
+      {loading ? <p>{t('loading_products')}</p> :
+        products.length === 0 ? <p>{t('no_products_found')}</p> :
+          <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead style={{ backgroundColor: "#add8e6" }}>
+              <tr>
+                <th>{t('product_name')}</th>
+                <th>{t('product_code')}</th>
+                <th>{t('unit')}</th>
+                <th>{t('quantity')}</th>
+                <th>{t('buying_price')}</th>
+                <th>{t('retail_price')}</th>
+                <th>{t('wholesale_price')}</th>
+                <th>{t('actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map(prod => (
+                <tr key={prod.productId}>
+                  <td>{prod.productName}</td>
+                  <td>{prod.productCode}</td>
+                  <td>{prod.unit?.unitName || "-"}</td>
+                  <td>{prod.quantity}</td>
+                  <td>{prod.buyingPrice}</td>
+                  <td>{prod.sellingPriceRetail}</td>
+                  <td>{prod.sellingPriceWholesale}</td>
+                  <td>
+                    <button onClick={() => handleEdit(prod)} style={{ marginRight: "0.5rem" }}>Edit</button>
+                    <button onClick={() => handleDelete(prod.productId)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>}
     </div>
   );
 };
 
 export default ManageProducts;
+
+

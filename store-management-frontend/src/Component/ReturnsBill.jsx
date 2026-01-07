@@ -1,9 +1,10 @@
-import { useTranslation } from 'react-i18next';import { FaHome } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next'; import { FaHome } from 'react-icons/fa';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import ukFlag from '../assets/flag/eng.png';
 import inFlag from '../assets/flag/ind.png';
+import './ReturnsBill.css';
 
 const CreateReturnBill = () => {
   const { t, i18n } = useTranslation();
@@ -28,6 +29,8 @@ const CreateReturnBill = () => {
     gstin: "GSTIN12345XYZ"
   };
 
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [returnDetails, setReturnDetails] = useState(null);
   const [sales, setSales] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -96,29 +99,29 @@ const CreateReturnBill = () => {
   };
 
   const handleItemChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  let val = value;
+    let val = value;
 
-  // If the field is quantity or price and value is not empty, parse it
-  if ((name === "quantity" || name === "price") && value !== "") {
-    val = parseFloat(value);
-    if (isNaN(val)) val = "";
-  }
+    // If the field is quantity or price and value is not empty, parse it
+    if ((name === "quantity" || name === "price") && value !== "") {
+      val = parseFloat(value);
+      if (isNaN(val)) val = "";
+    }
 
-  const updatedItem = {
-    ...currentItem,
-    [name]: val,
+    const updatedItem = {
+      ...currentItem,
+      [name]: val,
+    };
+
+    // Calculate totalPrice only if both quantity and price are valid numbers
+    const qty = parseFloat(updatedItem.quantity);
+    const prc = parseFloat(updatedItem.price);
+    updatedItem.totalPrice =
+      !isNaN(qty) && !isNaN(prc) ? qty * prc : "";
+
+    setCurrentItem(updatedItem);
   };
-
-  // Calculate totalPrice only if both quantity and price are valid numbers
-  const qty = parseFloat(updatedItem.quantity);
-  const prc = parseFloat(updatedItem.price);
-  updatedItem.totalPrice =
-    !isNaN(qty) && !isNaN(prc) ? qty * prc : "";
-
-  setCurrentItem(updatedItem);
-};
 
 
   const addItem = () => {
@@ -183,6 +186,19 @@ const CreateReturnBill = () => {
     setShowConfirmModal(true);
   };
 
+  const handlePrintAndReset = () => {
+  window.onafterprint = () => {
+    closePopup();
+    window.onafterprint = null;
+  };
+  window.print();
+};
+
+const closePopup = () => {
+  setPopupVisible(false);
+  setReturnDetails(null);
+};
+
   // Confirm and send data to backend
   const confirmAndSubmit = async () => {
     try {
@@ -194,11 +210,11 @@ const CreateReturnBill = () => {
           alert("Please fill all new customer fields.");
           return;
         }
-       const baseURL = process.env.REACT_APP_API_BASE_URL;
+        const baseURL = process.env.REACT_APP_API_BASE_URL;
 
-const res = await axios.post(
+        const res = await axios.post(
   `${baseURL}/api/customers/create/${encodeURIComponent(customerName)}/${mobileNumber}/${encodeURIComponent(address)}`
-);
+        );
         customerToUse = res.data;
       } else {
         customerToUse = customers.find(c => c.customerId === form.customer.customerId);
@@ -218,7 +234,8 @@ const res = await axios.post(
 
 const response = await axios.post(`${baseURL}/api/returns/create`, payload);
       setReturnId(response.data.returnId || null);
-      alert("Return Bill Created Successfully!");
+      setReturnDetails(response.data);   // ✅ store full return
+      setPopupVisible(true);   
 
       // Reset form after successful submit
       setForm({
@@ -285,7 +302,6 @@ const response = await axios.post(`${baseURL}/api/returns/create`, payload);
         {returnId && <h4>Return Bill ID: {returnId}</h4>}
       </div>
 
-      {/* Language Dropdown */}{/* Language Dropdown */}
       <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
         <div
           onClick={() => setIsOpen(!isOpen)}
@@ -346,7 +362,6 @@ const response = await axios.post(`${baseURL}/api/returns/create`, payload);
         )}
       </div>
 
-       {/* Dashboard Button */}
       <div style={{ position: 'fixed', top: '20px', left: '20px', zIndex: 1000 }}>
         <Link
           to="/dashboard"
@@ -378,218 +393,214 @@ const response = await axios.post(`${baseURL}/api/returns/create`, payload);
           Dashboard
         </Link>
       </div>
-      
-   
-     <form onSubmit={handleSubmit} style={{
-  display: 'flex',
-  flexWrap: 'wrap',
-  alignItems: 'center',
-  gap: '20px',
-  padding: '10px'
-}}>
-  <div style={{ width: '100%' }}>
-    <h2 style={{ margin: 0 }}>{t("createReturnBill")}</h2>
-  </div>
-  {/* Sale Selection */}
-  <div style={{ display: 'flex', flexDirection: 'column',  alignItems: 'center' }}>
-     <label style={{ marginBottom: '5px' }}>{t("sale")}</label>
-    <select
-      required
-      value={form.sale.saleId}
-      onChange={(e) =>
-        setForm(prev => ({ ...prev, sale: { saleId: e.target.value } }))
-      }
-    >
-      <option value="">{t("selectSale")}</option>
-      {sales.map(s => (
-        <option key={s.saleId} value={s.saleId}>#{s.saleId}</option>
-      ))}
-    </select>
-  </div>
 
-  {/* Customer Selection */}
-  <div style={{ display: 'flex', flexDirection: 'column' , alignItems: 'center'}}>
-    <label>{t("customer")}</label>
-    <select
-      required
-      onChange={handleCustomerSelect}
-      value={isNewCustomer ? "new" : form.customer.customerId || ""}
-    >
-      <option value="">{t("selectCustomer")}</option>
-      {customers.map(c => (
-        <option key={c.customerId} value={c.customerId}>
-          {c.customerName}
-        </option>
-      ))}
-      <option value="new">{t("addNewCustomer")}</option>
-    </select>
-  </div>
 
-  {/* Return Date */}
-  <div style={{ display: 'flex', flexDirection: 'column' , alignItems: 'center' }}>
-    <label>{t("returnDate")}</label>
-    <input
-      type="date"
-      name="returnDate"
-      value={form.returnDate}
-      onChange={handleFormChange}
-      required
-    />
-  </div>
-
-  {/* Return Type */}
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-    <label>{t("returnType")}</label>
-    <select
-      name="returnType"
-      value={form.returnType}
-      onChange={handleFormChange}
-    >
-      <option value="Retail">{t("retail")}</option>
-      <option value="Wholesale">{t("wholesale")}</option>
-    </select>
-  </div>
-
-  {/* Payment Mode */}
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-    <label>{t("paymentMode")}</label>
-    <select
-      name="paymentMode"
-      value={form.paymentMode}
-      onChange={handleFormChange}
-    >
-      <option value="Cash">{t("cash")}</option>
-      <option value="Online">{t("online")}</option>
-    </select>
-  </div>
-
-  {/* New Customer (if selected) */}
-  {isNewCustomer && (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <label>{t("name")}</label>
-        <input
-          type="text"
-          name="customerName"
-          placeholder={t("customerName")}
-          value={newCustomerForm.customerName}
-          onChange={handleNewCustomerInput}
-          required
-        />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <label>{t("mobile")}</label>
-        <input
-          type="text"
-          name="mobileNumber"
-          placeholder={t("mobileNumber")}
-          value={newCustomerForm.mobileNumber}
-          onChange={handleNewCustomerInput}
-          required
-        />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <label>{t("address")}</label>
-        <input
-          type="text"
-          name="address"
-          placeholder="Address"
-          value={newCustomerForm.address}
-          onChange={handleNewCustomerInput}
-          required
-        />
-      </div>
-    </>
-  )}
- 
-<table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', marginBottom: '10px' }}>
-  <thead>
-    <tr>
-      <th colSpan="4" style={{
-        fontSize: '18px',
-        padding: '12px 16px',
-        backgroundColor: 'white',
-        color: 'black',
-        textAlign: 'left'
+      <form onSubmit={handleSubmit} style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '20px',
+        padding: '10px'
       }}>
-        {t("addReturnItem")}
-      </th>
-    </tr>
-    <tr>
-      <th>{t("product")}</th>
-      <th>{t("quantity")}</th>
-      <th>{t("price")}</th>
-      <th></th> {/* Empty header for the button column */}
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>
-        <select
-          value={currentItem.productId}
-          onChange={e =>
-            setCurrentItem(prev => ({
-              ...prev,
-              productId: parseInt(e.target.value),
-            }))
-          }
-        >
-           <select value={selectedProductId} onChange={handleProductChange}>
-      <option value="">{t("selectProduct")}</option>
-      {products.map(p => (
-        <option key={p.productId} value={p.productId}>
-          {p.productName}
-        </option>
-      ))}
-    </select>
+        <div style={{ width: '100%' }}>
+          <h2 style={{ margin: 0 }}>{t("createReturnBill")}</h2>
+        </div>
+  
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <label style={{ marginBottom: '5px' }}>{t("sale")}</label>
+          <select
+            required
+            value={form.sale.saleId}
+            onChange={(e) =>
+              setForm(prev => ({ ...prev, sale: { saleId: e.target.value } }))
+            }
+          >
+            <option value="">{t("selectSale")}</option>
+            {sales.map(s => (
+              <option key={s.saleId} value={s.saleId}>#{s.saleId}</option>
+            ))}
+          </select>
+        </div>
 
-        </select>
-      </td>
-      <td>
-        <input
-          type="number"
-          name="quantity"
-          placeholder="Quantity"
-          value={currentItem.quantity === 0 ? '' : currentItem.quantity}
-          onChange={handleItemChange}
-          min="0"
-          style={{ width: '80px' }}
-        />
-      </td>
-      <td>
-        <input
-          type="number"
-          name="price"
-          placeholder="Price"
-          value={currentItem.price === 0 ? '' : currentItem.price}
-          onChange={handleItemChange}
-          min="0"
-          style={{ width: '80px' }}
-        />
-      </td>
-      <td>
-        <button type="button" onClick={addItem} style={{ marginLeft: '10px' }}>
-          {t("addItem")}
-        </button>
-      </td>
-    </tr>
-  </tbody>
-</table>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <label>{t("customer")}</label>
+          <select
+            required
+            onChange={handleCustomerSelect}
+            value={isNewCustomer ? "new" : form.customer.customerId || ""}
+          >
+            <option value="">{t("selectCustomer")}</option>
+            {customers.map(c => (
+              <option key={c.customerId} value={c.customerId}>
+                {c.customerName}
+              </option>
+            ))}
+            <option value="new">{t("addNewCustomer")}</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <label>{t("returnDate")}</label>
+          <input
+            type="date"
+            name="returnDate"
+            value={form.returnDate}
+            onChange={handleFormChange}
+            required
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <label>{t("returnType")}</label>
+          <select
+            name="returnType"
+            value={form.returnType}
+            onChange={handleFormChange}
+          >
+            <option value="Retail">{t("retail")}</option>
+            <option value="Wholesale">{t("wholesale")}</option>
+          </select>
+        </div>
+
+    
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <label>{t("paymentMode")}</label>
+          <select
+            name="paymentMode"
+            value={form.paymentMode}
+            onChange={handleFormChange}
+          >
+            <option value="Cash">{t("cash")}</option>
+            <option value="Online">{t("online")}</option>
+          </select>
+        </div>
+
+        
+        {isNewCustomer && (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <label>{t("name")}</label>
+              <input
+                type="text"
+                name="customerName"
+                placeholder={t("customerName")}
+                value={newCustomerForm.customerName}
+                onChange={handleNewCustomerInput}
+                required
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <label>{t("mobile")}</label>
+              <input
+                type="text"
+                name="mobileNumber"
+                placeholder={t("mobileNumber")}
+                value={newCustomerForm.mobileNumber}
+                onChange={handleNewCustomerInput}
+                required
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <label>{t("address")}</label>
+              <input
+                type="text"
+                name="address"
+                placeholder="Address"
+                value={newCustomerForm.address}
+                onChange={handleNewCustomerInput}
+                required
+              />
+            </div>
+          </>
+        )}
+
+        <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', marginBottom: '10px' }}>
+          <thead>
+            <tr>
+              <th colSpan="4" style={{
+                fontSize: '18px',
+                padding: '12px 16px',
+                backgroundColor: 'white',
+                color: 'black',
+                textAlign: 'left'
+              }}>
+                {t("addReturnItem")}
+              </th>
+            </tr>
+            <tr>
+              <th>{t("product")}</th>
+              <th>{t("quantity")}</th>
+              <th>{t("price")}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <select
+                  value={currentItem.productId}
+                  onChange={(e) =>
+                    setCurrentItem(prev => ({
+                      ...prev,
+                      productId: e.target.value, // keep as string
+                    }))
+                  }
+                >
+                  <option value="">{t("selectProduct")}</option>
+                  {products.map(p => (
+                    <option key={p.productId} value={p.productId}>
+                      {p.productName}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  name="quantity"
+                  placeholder="Quantity"
+                  value={currentItem.quantity === 0 ? '' : currentItem.quantity}
+                  onChange={handleItemChange}
+                  min="0"
+                  style={{ width: '80px' }}
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  name="price"
+                  placeholder="Price"
+                  value={currentItem.price === 0 ? '' : currentItem.price}
+                  onChange={handleItemChange}
+                  min="0"
+                  style={{ width: '80px' }}
+                />
+              </td>
+              <td>
+                <button type="button" onClick={addItem} style={{ marginLeft: '10px' }}>
+                  {t("addItem")}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <table style={{ width: '100%', marginTop: '20px', borderCollapse: 'collapse' }}>
-         
+
           <thead>
-             <th colSpan="4" style={{
-        fontSize: '18px',
-        padding: '12px 16px',
-        backgroundColor: 'white',
-        color: 'black',
-        textAlign: 'left'
-      }}>
-        {t("totalReturnItems")}
-      </th>
+            <tr>
+              <th colSpan="4" style={{
+                fontSize: '18px',
+                padding: '12px 16px',
+                backgroundColor: 'white',
+                color: 'black',
+                textAlign: 'left'
+              }}>
+                {t("totalReturnItems")}
+              </th>
+            </tr>
             <tr>
               <th style={{ borderBottom: '1px solid #ccc' }}>{t("product")}</th>
               <th style={{ borderBottom: '1px solid #ccc' }}>{t("quantity")}</th>
@@ -620,8 +631,6 @@ const response = await axios.post(`${baseURL}/api/returns/create`, payload);
 
         <button type="submit" style={{ marginTop: '20px' }}>{t("createReturnBill")}</button>
       </form>
-
-      {/* Confirmation Modal */}
       {showConfirmModal && (
         <div
           style={{
@@ -652,9 +661,16 @@ const response = await axios.post(`${baseURL}/api/returns/create`, payload);
               <button onClick={confirmAndSubmit}>{t("confirm")}</button>
             </div>
           </div>
+
+  
+
         </div>
+
+        
       )}
+
     </div>
+    
   );
 };
 

@@ -104,35 +104,42 @@ public class SaleService {
     }
 
     private SaleDTO toDTO(Sale sale) {
-        List<SaleItemDTO> saleItemDTOs = sale.getItems().stream()
-                .map(saleItem -> SaleItemDTO.builder()
-                        .saleItemId(saleItem.getItemId())
-                        .product(ProductDTO.builder()
-                                .productId(saleItem.getProduct().getProductId())
-                                .productCode(saleItem.getProduct().getProductCode())
-                                .productName(saleItem.getProduct().getProductName())
-                                .build())
-                        .quantity(saleItem.getQuantity())
-                        .price(saleItem.getPrice())
-                        .totalPrice(saleItem.getTotalPrice())
-                        .build())
-                .collect(Collectors.toList());
-    
-        return SaleDTO.builder()
-                .saleId(sale.getSaleId())
-                .customer(CustomerDTO.builder()
-                        .customerId(BigInteger.valueOf(sale.getCustomer().getCustomerId().longValue()))
-                        .customerName(sale.getCustomer().getCustomerName())
-                        .mobileNumber(sale.getCustomer().getMobileNumber())
-                        .address(sale.getCustomer().getAddress())
-                        .build())
-                .saleDate(sale.getSaleDate())
-                .paymentMode(sale.getPaymentMode()) // fixed
-                .saleType(sale.getSaleType())       // fixed
-                .grossTotal(sale.getGrossTotal())
-                .items(saleItemDTOs)
+    List<SaleItemDTO> saleItemDTOs = sale.getItems().stream()
+            .map(saleItem -> SaleItemDTO.builder()
+                    .saleItemId(saleItem.getItemId())
+                    .product(ProductDTO.builder()
+                            .productId(saleItem.getProduct().getProductId())
+                            .productCode(saleItem.getProduct().getProductCode())
+                            .productName(saleItem.getProduct().getProductName())
+                            .build())
+                    .quantity(saleItem.getQuantity())
+                    .price(saleItem.getPrice())
+                    .totalPrice(saleItem.getTotalPrice())
+                    .build())
+            .collect(Collectors.toList());
+
+    CustomerDTO customerDTO = null;
+
+    if (sale.getCustomer() != null) {
+        customerDTO = CustomerDTO.builder()
+                .customerId(BigInteger.valueOf(sale.getCustomer().getCustomerId().longValue()))
+                .customerName(sale.getCustomer().getCustomerName())
+                .mobileNumber(sale.getCustomer().getMobileNumber())
+                .address(sale.getCustomer().getAddress())
                 .build();
     }
+
+    return SaleDTO.builder()
+            .saleId(sale.getSaleId())
+            .customer(customerDTO)   // ✅ SAFE
+            .saleDate(sale.getSaleDate())
+            .paymentMode(sale.getPaymentMode())
+            .saleType(sale.getSaleType())
+            .grossTotal(sale.getGrossTotal())
+            .items(saleItemDTOs)
+            .build();
+}
+
 
     public List<SaleDTO> findByIdentifier(String identifier) {
         List<Sale> sales;
