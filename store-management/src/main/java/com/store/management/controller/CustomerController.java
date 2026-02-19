@@ -43,24 +43,21 @@ public class CustomerController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/create/{customerName}/{mobileNumber}/{address}")
-public ResponseEntity<?> createCustomer(@PathVariable String customerName,
-                                        @PathVariable String mobileNumber,
-                                        @PathVariable String address) {
-    boolean existence = customerService.customerExists(customerName, mobileNumber);
+@PostMapping
+public ResponseEntity<?> createCustomer(@RequestBody Customer customer) {
+
+    boolean existence = customerService.customerExists(
+            customer.getCustomerName(),
+            customer.getMobileNumber()
+    );
 
     if (existence) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body("Customer already exists with the same name and mobile number.");
     }
 
-    Customer customer = new Customer();
-    customer.setCustomerName(customerName);
-    customer.setMobileNumber(mobileNumber);
-    customer.setAddress(address);
-
     Customer createdCustomer = customerService.saveCustomer(customer);
-    return ResponseEntity.ok(createdCustomer);
+    return ResponseEntity.status(HttpStatus.CREATED).body(createdCustomer);
 }
 
 

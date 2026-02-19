@@ -177,9 +177,15 @@ const CreateSaleBill = () => {
           return;
         }
 
-        const customerRes = await axios.post(
-  `${process.env.REACT_APP_API_BASE_URL}/api/customers/create/${encodeURIComponent(customerName)}/${mobileNumber}/${encodeURIComponent(address)}`
+const customerRes = await axios.post(
+  `${process.env.REACT_APP_API_BASE_URL}/api/customers`,
+  {
+    customerName,
+    mobileNumber,
+    address
+  }
 );
+
         customerToUse = customerRes.data;
       }
 
