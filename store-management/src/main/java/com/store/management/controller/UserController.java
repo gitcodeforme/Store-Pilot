@@ -17,7 +17,6 @@ import com.store.management.model.User;
 @RequestMapping("/api")
 @CrossOrigin(origins = {
     "https://awasthistore.in",
-    "https://store-pilot.vercel.app"
 })
 public class UserController {
 
