@@ -30,43 +30,38 @@ public class CustomerService {
     public Optional<Customer> getCustomerByMobileNumber(String mobileNumber) {
         return customerRepository.findByMobileNumber(mobileNumber);
     }
-    
+
     public Optional<Customer> getCustomerByName(String name) {
         return customerRepository.findFirstByCustomerNameIgnoreCase(name);
     }
-    
+
+    // ✅ Fixed: uses repository's built-in method
     public boolean customerExists(String customerName, String mobileNumber) {
-    if (customerName == null || mobileNumber == null || 
-        customerName.isEmpty() || mobileNumber.isEmpty()) {
-        return false;
+        if (customerName == null || mobileNumber == null ||
+            customerName.isEmpty() || mobileNumber.isEmpty()) {
+            return false;
+        }
+        return customerRepository.existsByCustomerNameIgnoreCaseAndMobileNumber(customerName, mobileNumber);
     }
-    return customerRepository.existsCustomer(customerName, mobileNumber);
-}
 
     public Customer saveCustomer(Customer customer) {
         // Generate customer code if not provided
         if (customer.getCustomerCode() == null || customer.getCustomerCode().isEmpty()) {
             String lastCode = customerRepository.findLastCustomerCode(); // e.g., CUS9
             int nextNumber = 1;
-    
+
             if (lastCode != null && lastCode.startsWith("CUS")) {
                 try {
-                    // Extract the number from the last code and increment it
                     nextNumber = Integer.parseInt(lastCode.substring(3)) + 1;
                 } catch (NumberFormatException ignored) {}
             }
-    
-            // Generate the new customer code (CUS1, CUS2, ...)
+
             String newCustomerCode = "CUS" + nextNumber; // CUS1, CUS2, CUS3, ...
             customer.setCustomerCode(newCustomerCode);
         }
-    
+
         return customerRepository.save(customer);
     }
-    
-    // public Customer saveCustomer(Customer customer) {
-    //     return customerRepository.save(customer);
-    // }
 
     public void deleteCustomer(BigInteger id) {
         customerRepository.deleteById(id);
