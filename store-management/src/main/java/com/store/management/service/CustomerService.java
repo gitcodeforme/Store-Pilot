@@ -36,8 +36,12 @@ public class CustomerService {
     }
     
     public boolean customerExists(String customerName, String mobileNumber) {
-    return customerRepository.existsByCustomerNameIgnoreCaseAndMobileNumber(customerName, mobileNumber);
+    if (customerName == null || mobileNumber == null || customerName.isEmpty() || mobileNumber.isEmpty()) {
+        return false; // skip existence check if data is invalid
+    }
+    return customerRepository.existsCustomer(customerName, mobileNumber);
 }
+
 
     public Customer saveCustomer(Customer customer) {
         // Generate customer code if not provided
