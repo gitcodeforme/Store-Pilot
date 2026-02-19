@@ -13,7 +13,6 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://awasthistore.in")
 @RestController
 @RequestMapping("/api/sale-items")
 public class SaleItemController {

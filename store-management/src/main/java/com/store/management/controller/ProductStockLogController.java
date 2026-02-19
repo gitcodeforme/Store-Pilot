@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/product-stock-logs")
-@CrossOrigin(origins = "http://awasthistore.in")
 public class ProductStockLogController {
 
     @Autowired
