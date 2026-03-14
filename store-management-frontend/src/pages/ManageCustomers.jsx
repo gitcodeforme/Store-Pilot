@@ -44,10 +44,10 @@ const CustomerManager = () => {
   // Fetch all customers on mount
   const fetchCustomers = async () => {
     try {
-      const res = await axiosInstance.get('/api/customers');
+      const res = await axiosInstance.get("/api/customers");
       setCustomers(res.data);
     } catch (error) {
-      console.error('Failed to fetch customers:', error);
+      console.error("Failed to fetch customers:", error);
     }
   };
 
@@ -89,99 +89,129 @@ const CustomerManager = () => {
     if (!searchInput.trim()) return;
 
     try {
-      // Backend expects either name or mobile number to fetch customer
-      const res = await axiosInstance.get(`/api/customers/${searchInput}`);
+      const res = await axiosInstance.get(
+        `/api/customers/${encodeURIComponent(searchInput)}`
+      );
+
       setFoundCustomer(res.data);
       setForm({
-        customerName: res.data.customerName || '',
-        mobileNumber: res.data.mobileNumber || '',
-        address: res.data.address || '',
+        customerName: res.data.customerName || "",
+        mobileNumber: res.data.mobileNumber || "",
+        address: res.data.address || ""
       });
+
       setSuggestions([]);
-    } catch (error) {
+    } catch {
       setFoundCustomer(null);
-      alert('Customer not found');
+      alert("Customer not found");
     }
   };
+
 
   const handleCreateCustomer = async () => {
     const { customerName, mobileNumber, address } = form;
 
     if (!customerName || !mobileNumber || !address) {
-      alert('Please fill out all fields');
+      alert("Please fill out all fields");
       return;
     }
 
-    // Validate mobile number
     if (!validateIndianMobileNumber(mobileNumber)) {
-      alert('Please enter a valid 10-digit Indian mobile number starting with 6,7,8, or 9.');
+      alert("Invalid mobile number");
       return;
     }
 
     try {
-     await axiosInstance.post(
-  `/api/customers/create/${encodeURIComponent(customerName)}/${mobileNumber}/${encodeURIComponent(address)}`
-);
+      await axiosInstance.post("/api/customers", {
+        customerName,
+        mobileNumber,
+        address
+      });
 
-      alert('Customer created successfully!');
-      setForm({ customerName: '', mobileNumber: '', address: '' });
+      alert("Customer created successfully");
+
+      setForm({
+        customerName: "",
+        mobileNumber: "",
+        address: ""
+      });
+
       fetchCustomers();
     } catch (error) {
-      console.error('Error creating customer:', error);
-
-      if (error.response && error.response.status === 409) {
-        alert('Customer already exists with the same name and mobile number.');
+      if (error.response?.status === 409) {
+        alert("Customer already exists");
       } else {
-        alert('Error creating customer. Please try again.');
+        alert("Error creating customer");
       }
     }
   };
 
+
   const handleUpdate = async () => {
     if (!searchInput) {
-      alert('Please search a customer to update.');
+      alert("Search a customer first");
       return;
     }
 
-    // Validate mobile number before update
     if (!validateIndianMobileNumber(form.mobileNumber)) {
-      alert('Please enter a valid 10-digit Indian mobile number starting with 6,7,8, or 9.');
+      alert("Invalid mobile number");
       return;
     }
 
     try {
-      await axiosInstance.put(`/api/customers/${searchInput}`, form);
-      alert('Customer updated successfully!');
+      await axiosInstance.put(
+        `/api/customers/${encodeURIComponent(searchInput)}`,
+        form
+      );
+
+      alert("Customer updated");
+
       setFoundCustomer(null);
-      setForm({ customerName: '', mobileNumber: '', address: '' });
-      setSearchInput('');
+      setSearchInput("");
+      setForm({
+        customerName: "",
+        mobileNumber: "",
+        address: ""
+      });
+
       fetchCustomers();
     } catch (error) {
-      console.error('Error updating customer:', error);
-      alert('Error updating customer');
+      console.error(error);
+      alert("Update failed");
     }
   };
+
 
   const handleDelete = async () => {
     if (!searchInput) {
-      alert('Please search a customer to delete.');
+      alert("Search a customer first");
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this customer?')) return;
+    if (!window.confirm("Delete this customer?")) return;
 
     try {
-      await axiosInstance.delete(`/api/customers/${searchInput}`);
-      alert('Customer deleted successfully!');
+      await axiosInstance.delete(
+        `/api/customers/${encodeURIComponent(searchInput)}`
+      );
+
+      alert("Customer deleted");
+
       setFoundCustomer(null);
-      setForm({ customerName: '', mobileNumber: '', address: '' });
-      setSearchInput('');
+      setSearchInput("");
+      setForm({
+        customerName: "",
+        mobileNumber: "",
+        address: ""
+      });
+
       fetchCustomers();
     } catch (error) {
-      console.error('Error deleting customer:', error);
-      alert('Error deleting customer');
+      console.error(error);
+      alert("Delete failed");
     }
   };
+
 
   return (
     <div
