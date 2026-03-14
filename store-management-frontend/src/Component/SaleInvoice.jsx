@@ -39,8 +39,8 @@ const Invoice = () => {
     <div id="invoice" style={{ fontFamily: 'Courier New, monospace', padding: '20px', maxWidth: '600px', margin: 'auto', border: '1px solid #000' }}>
       <pre style={{ textAlign: 'center', fontSize: '16px' }}>
 ------------------------------------------------------------
-                   [Your Store Name]
-             Address | Phone | GSTIN (if any)
+                   [AWASTHI ATTA CHAKKI]
+             Bamba Road Gumti No-5 | Phone: 6391757757
 ------------------------------------------------------------
 Bill No: {saleData.saleId.toString().padStart(6, '0')}        Date: {saleData.saleDate}
 Customer: {saleData.customer.name}     Phone: {saleData.customer.mobile}

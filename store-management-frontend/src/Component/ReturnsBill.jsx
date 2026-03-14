@@ -24,9 +24,9 @@ const CreateReturnBill = () => {
 
   const STORE_INFO = {
     name: "Awasthi Atta Chakki",
-    phone: "9876543210",
-    gstin: "GSTIN12345XYZ"
+    phone: "6391757757"
   };
+
 
   const [popupVisible, setPopupVisible] = useState(false);
   const [returnDetails, setReturnDetails] = useState(null);
@@ -297,7 +297,7 @@ const response = await axios.post(`${baseURL}/api/returns/create`, payload);
     <div style={{ maxWidth: '800px', margin: 'auto', fontFamily: 'Arial, sans-serif', padding: '20px', border: '1px solid #ccc', borderRadius: '10px' }}>
       <div style={{ textAlign: 'center' }}>
         <h1 style={{ margin: '0' }}>{STORE_INFO.name}</h1>
-        <p>Phone: {STORE_INFO.phone} | GSTIN: {STORE_INFO.gstin}</p>
+        <p>Phone: {STORE_INFO.phone}</p>
         {returnId && <h4>Return Bill ID: {returnId}</h4>}
       </div>
 

@@ -28,7 +28,6 @@ const CreateSaleBill = () => {
   const STORE_INFO = {
     name: 'Awasthi Atta Chakki',
     phone: '9876543210',
-    gstin: 'GSTIN12345XYZ',
   };
 
   const [billItems, setBillItems] = useState([]);
@@ -259,7 +258,7 @@ const generateWhatsAppInvoiceMessage = (saleDetails) => {
     <div className="create-sale-container">
       <div style={{ textAlign: 'center' }}>
         <h1>{STORE_INFO.name}</h1>
-        <p>Phone: {STORE_INFO.phone} | GSTIN: {STORE_INFO.gstin}</p>
+        <p>Phone: {STORE_INFO.phone}</p>
         {saleId && <h4>Sale ID: {saleId}</h4>}
       </div>
 
@@ -464,7 +463,7 @@ const generateWhatsAppInvoiceMessage = (saleDetails) => {
           <div className="print-page" id="print-area">
             <h1 style={{ textAlign: 'center' }}>{STORE_INFO.name}</h1>
             <p style={{ textAlign: 'center' }}>
-              Phone: {STORE_INFO.phone} | GSTIN: {STORE_INFO.gstin}
+              Phone: {STORE_INFO.phone} 
             </p>
             <hr />
             <h2>{t("invoice")}</h2>
